@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Button Call Example</title>
+    <script>
+        async function callGreet() {
+            try {
+                const response = await fetch('/call/greet');
+                const data = await response.text();
+                document.getElementById('output').innerText = data;
+            } catch (error) {
+                document.getElementById('output').innerText = 'Error: ' + error;
+            }
+        }
+    </script>
+</head>
+<body>
+    <button onclick="callGreet()">Call Greet</button>
+    <div id="output"></div>
+</body>
+</html>
