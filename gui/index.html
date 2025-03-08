@@ -5,11 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Button Call Example</title>
     <script>
+        async function callAdd(a,b) {
+            try {
+                const response = await fetch('/call/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({a: a, b: b})
+                });
+                const data = await response.json();
+                document.getElementById('output').innerText = data.res;
+            } catch (error) {
+                document.getElementById('output').innerText = 'Error: ' + error;
+            }
+            
+        }
         async function callGreet() {
             try {
                 const response = await fetch('/call/greet');
-                const data = await response.text();
-                document.getElementById('output').innerText = data;
+                const data = await response.json();
+                document.getElementById('output').innerText = data.res;
             } catch (error) {
                 document.getElementById('output').innerText = 'Error: ' + error;
             }
@@ -18,6 +34,7 @@
 </head>
 <body>
     <button onclick="callGreet()">Call Greet</button>
+    <button onclick="callAdd(1,2)">Call Add</button>
     <div id="output"></div>
 </body>
 </html>
