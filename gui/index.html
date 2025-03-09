@@ -4,32 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Button Call Example</title>
+    <script src="paneer.js"></script>
     <script>
-        async function callAdd(a,b) {
-            try {
-                const response = await fetch('/call/add', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({a: a, b: b})
-                });
-                const data = await response.json();
-                document.getElementById('output').innerText = data.res;
-            } catch (error) {
-                document.getElementById('output').innerText = 'Error: ' + error;
-            }
-            
+    async function callAdd(a, b) {
+        try {
+            const result = await paneerInvoke('add', { a, b });
+            console.log("wtff")
+            console.log(result);
+            document.getElementById('output').innerText = result;
+        } catch (error) {
+            document.getElementById('output').innerText = error;
         }
-        async function callGreet() {
-            try {
-                const response = await fetch('/call/greet');
-                const data = await response.json();
-                document.getElementById('output').innerText = data.res;
-            } catch (error) {
-                document.getElementById('output').innerText = 'Error: ' + error;
-            }
+    }
+
+    async function callGreet() {
+        try {
+            const result = await paneerInvoke('greet', {});
+            document.getElementById('output').innerText = result;
+        } catch (error) {
+            document.getElementById('output').innerText = error;
         }
+    }
     </script>
 </head>
 <body>

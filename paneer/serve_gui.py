@@ -1,39 +1,31 @@
-from flask import Flask, send_from_directory, request
-from paneer.comms import exposed_functions
+import asyncio
+import websockets
 import json
-import os
-import sys
+from paneer.comms import exposed_functions
 
-if getattr(sys, 'frozen', False):
-    # Some weird thing when bundled with pyinstaller the bootloader sets path in _MEIPASS
-    application_path = sys._MEIPASS
-else:
-    application_path = os.path.dirname(os.path.abspath(__file__))
-    application_path = os.path.dirname(application_path)
+async def handle_call(websocket, path):
+    print('connected')
+    async for message in websocket:
+        print('hello')
+        print(message)
+        data = json.loads(message)
+        print(data)
+        command = data.get("action")
+        args = {v for k, v in data.items() if k not in ["action", "id"]}
+        print(command)
+        print(args)
+        if command in exposed_functions:
+            result = exposed_functions[command](*args)
+            response = {"res": result, "id": data.get("id")}
+        else:
+            response = {"error": f"no command named: {command}", "id": data.get("id")}
+        print(response,"tf")
+        await websocket.send(json.dumps(response))
 
-print(application_path)
-app = Flask(__name__)
+async def start_server():
+    server = await websockets.serve(handle_call, "localhost", 8765)
+    return server
 
-directory_to_serve = os.path.join(application_path, 'gui')
-
-@app.route('/')
-@app.route('/<path:filename>')
-def serve_file(filename='index.html'):
-    if filename == '':
-        filename = 'index.html'
-    return send_from_directory(directory_to_serve, filename)
-
-@app.route('/call/<command>', methods=['GET', 'POST'])
-def call(command):
-    args = []
-
-    if request.method == 'POST':
-        args_json = request.get_json()
-        args = list(args_json.values())
-        
-    if command in exposed_functions:
-        return json.dumps({"res":exposed_functions[command](*args)})
-    return f'no command named: {command}', 404
-
-if __name__ == '__main__':
-    app.run(debug=True,port=8765)
+if __name__ == "__main__":
+    asyncio.get_event_loop().run_until_complete(start_server())
+    asyncio.get_event_loop().run_forever()
