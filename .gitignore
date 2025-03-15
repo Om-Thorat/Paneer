@@ -4,3 +4,8 @@
 *.pyc
 *.pyo
 *.spec
+/lib/
+/bin/
+/lib64/
+/include/
+/.vscode/

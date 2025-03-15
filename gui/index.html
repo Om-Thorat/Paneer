@@ -6,24 +6,13 @@
     <title>Button Call Example</title>
     <script src="paneer.js"></script>
     <script>
+    
     async function callAdd(a, b) {
-        try {
-            const result = await paneerInvoke('add', { a, b });
-            console.log("wtff")
-            console.log(result);
-            document.getElementById('output').innerText = result;
-        } catch (error) {
-            document.getElementById('output').innerText = error;
-        }
+        document.getElementById('output').innerText = await window.paneer.invoke("add", {a, b});
     }
 
     async function callGreet() {
-        try {
-            const result = await paneerInvoke('greet', {});
-            document.getElementById('output').innerText = result;
-        } catch (error) {
-            document.getElementById('output').innerText = error;
-        }
+        document.getElementById('output').innerText = await window.paneer.invoke("greet", {});
     }
     </script>
 </head>

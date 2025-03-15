@@ -1,14 +1,14 @@
-from paneer.init import run_app
 from paneer.comms import paneer_command
+from paneer.proto import Paneer
 import time
 
 @paneer_command
-def greet():
+async def greet():
     return "hello from py"
  
 @paneer_command
-def add(a,b):
-    time.sleep(10)
+async def add(a,b):
+    time.sleep(3)
     return (int(a)+int(b))
 
-run_app()
+Paneer()
