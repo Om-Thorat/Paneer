@@ -10,6 +10,7 @@ from paneer.comms import exposed_functions
 import json
 import asyncio
 import threading
+from concurrent.futures import ThreadPoolExecutor
 
 class Paneer:
     def discover_gui(self):
@@ -40,6 +41,9 @@ class Paneer:
         self.webview.get_user_content_manager().connect("script-message-received::paneer", self.on_invoke_handler)
         
         dir_to_serve = self.discover_gui()
+        
+        self.webview.get_settings().set_enable_developer_extras(True)
+
         self.webview.load_uri("file://" + dir_to_serve)
         self.window.set_child(self.webview)
         self.window.present()
@@ -52,12 +56,14 @@ class Paneer:
             loop.close()
             return result
 
-        #  because gtk is not thread safe sooo gotta run in diff thread :(
-        #  but this also means we can "run out" of threads so FIXME
-        threading.Thread(target=thread_function, daemon=True).start()
+        if not hasattr(self, "_executor"):
+            self._executor = ThreadPoolExecutor(max_workers=10)
+
+        self._executor.submit(thread_function)
             
     async def on_invoke(self, webview, message):
         msg = json.loads(message.to_json(2))
+        cmd_id =  msg["id"]
         func = msg["func"]
         args = msg["args"].values()
         print(func, args)
@@ -70,11 +76,12 @@ class Paneer:
                 result = f"Function {func} not found"
                 
             print(result)
-            json_result = json.dumps(result)
+            json_result = json.dumps({"result": result, "id": cmd_id})
+            print(json_result)
             self.webview.evaluate_javascript(f"window.paneer._resolve({json_result});", -1, None, None)
         except Exception as e:
-            error_msg = json.dumps(str(e))
-            self.webview.evaluate_javascript(f"window.paneer._resolve({{error: {error_msg}}});", -1, None, None)
+            error_msg = json.dumps({"error": str(e), "id": cmd_id})
+            self.webview.evaluate_javascript(f"window.paneer._resolve({error_msg});", -1, None, None)
 
     def invoke(self, func, args):
         if func in exposed_functions:
@@ -85,12 +92,5 @@ class Paneer:
 if __name__ == "__main__":
     Paneer()
 
-# def on_activate(app):
-#     webview = WebKit.WebView()
-#     context = webview.get_context()
-#     print(help(context))
-#     webview.load_uri("file://" + discover_gui())
-#     win.set_child(webview)
-#     win.present()
 
 

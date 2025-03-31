@@ -8,11 +8,18 @@
     <script>
     
     async function callAdd(a, b) {
-        document.getElementById('output').innerText = await window.paneer.invoke("add", {a, b});
+        console.log("hey")
+       let x = await window.paneer.invoke("add", {a, b});
+       console.log(x)
+       document.getElementById('output').innerText =  x;
     }
 
+
     async function callGreet() {
-        document.getElementById('output').innerText = await window.paneer.invoke("greet", {});
+        let x = await window.paneer.invoke("greet", {});
+        console.log(x)
+        document.getElementById('output').innerText =  x;
+        console.log("setgreet")
     }
     </script>
 </head>
