@@ -7,6 +7,13 @@ def paneer_command(func):
     def wrapper(*args, **kwargs):
         return func(*args, **kwargs)
     
-    exposed_functions[func.__name__] = func
+    exposed_functions[func.__name__] = {"function": func, "blocking": False}
     return wrapper
 
+def paneer_command_blocking(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+    
+    exposed_functions[func.__name__] = {"function": func, "blocking": True}
+    return wrapper

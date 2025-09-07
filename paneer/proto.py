@@ -2,7 +2,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("WebKit", "6.0")
-from gi.repository import Gtk, Gio
+from gi.repository import Gtk, Gio, GLib
 from gi.repository import WebKit
 import sys
 import os
@@ -12,6 +12,33 @@ import asyncio
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
+class Window:
+    def __init__(self, title="Paneer", width=800, height=600):
+        self.title = title
+        self.width = width
+        self.height = height
+        self.resizable = True
+    
+    @property
+    def height(self):
+        return self._height
+    
+    @height.setter
+    def height(self, value: int):
+        if (value <= 0):
+            raise ValueError("Height must be a positive integer")
+        self._height = value
+    
+    @property
+    def width(self):
+        return self._width
+    
+    @width.setter
+    def width(self, value: int):
+        if (value <= 0):
+            raise ValueError("Width must be a positive integer")
+        self._width = value
+        
 class Paneer:
     def discover_gui(self):
         if getattr(sys, "frozen", False):
@@ -25,63 +52,67 @@ class Paneer:
 
         return directory_to_serve + "/index.html"
         
-    def __init__(self):
+    def __init__(self,window):
         self.app = Gtk.Application(application_id="com.github.om-thorat.Example", flags=Gio.ApplicationFlags.FLAGS_NONE)
         self.app.connect("activate", self.on_activate)
-        self.app.run()
-        
+        self.window_props = window     
+        self.task_loop = asyncio.new_event_loop()
+        self.task_thread = threading.Thread(target=self.task_loop.run_forever, daemon=True)
+        self.task_thread.start()
+
+        self.executor = ThreadPoolExecutor(max_workers=8)
+
     def on_activate(self, app):
-        self.window = Gtk.ApplicationWindow(application=app)
-        self.window.set_default_size(800, 600)
+        self.app_window = Gtk.ApplicationWindow(application=app)
+        self.app_window.set_title(self.window_props.title)
+        self.app_window.set_default_size(self.window_props.width, self.window_props.height)
+        self.app_window.set_resizable(self.window_props.resizable)
+
 
         self.webview = WebKit.WebView()
         self.webview.get_settings().set_allow_file_access_from_file_urls(True)
         self.webview.get_user_content_manager().register_script_message_handler("paneer")
-
-        self.webview.get_user_content_manager().connect("script-message-received::paneer", self.on_invoke_handler)
+        self.webview.get_user_content_manager().connect("script-message-received::paneer", self.on_invoke)
         
         dir_to_serve = self.discover_gui()
         
         self.webview.get_settings().set_enable_developer_extras(True)
 
         self.webview.load_uri("file://" + dir_to_serve)
-        self.window.set_child(self.webview)
-        self.window.present()
+        self.app_window.set_child(self.webview)
+        self.app_window.present()
 
-    def on_invoke_handler(self, webview, message):
-        def thread_function():
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            result = loop.run_until_complete(self.on_invoke(webview, message))
-            loop.close()
-            return result
+    def run(self):
+        self.app.run()
 
-        if not hasattr(self, "_executor"):
-            self._executor = ThreadPoolExecutor(max_workers=10)
+    def _return_result(self, result, msg_id):
+            def send():
+                json_result = json.dumps({"result": result, "id": msg_id})
+                self.webview.evaluate_javascript(f"window.paneer._resolve({json_result});", -1, None, None)
+            GLib.idle_add(send)
 
-        self._executor.submit(thread_function)
-            
-    async def on_invoke(self, webview, message):
+    def on_invoke(self, webview, message):
         msg = json.loads(message.to_json(2))
-        cmd_id =  msg["id"]
         func = msg["func"]
-        args = msg["args"].values()
-        print(func, args)
-        try:
-            if func in exposed_functions:
-                result = exposed_functions[func](*args)
-                if hasattr(result, '__await__'):
-                    result = await result
-            else:
-                result = f"Function {func} not found"
-                
-            print(result)
-            json_result = json.dumps({"result": result, "id": cmd_id})
-            print(json_result)
-            self.webview.evaluate_javascript(f"window.paneer._resolve({json_result});", -1, None, None)
-        except Exception as e:
-            error_msg = json.dumps({"error": str(e), "id": cmd_id})
+        func_info = exposed_functions.get(func)
+
+        if not func_info:
+            error_msg = json.dumps({"error": f"Function {func} not found", "id": msg["id"]})
             self.webview.evaluate_javascript(f"window.paneer._resolve({error_msg});", -1, None, None)
+            return
+
+        blocking = func_info and func_info.get("blocking", False)
+        func = func_info["function"] if func_info else None
+
+        if blocking:
+            future = self.executor.submit(func, *msg["args"].values())
+            future.add_done_callback(lambda f: self._return_result(f.result(), msg["id"]))
+        elif asyncio.iscoroutinefunction(func_info["function"]):
+            future = asyncio.run_coroutine_threadsafe(func(*msg["args"].values()), self.task_loop)
+            future.add_done_callback(lambda f: self._return_result(f.result(), msg["id"]))
+        else:
+            res = func(*msg["args"].values())
+            self._return_result(res, msg["id"])
 
     def invoke(self, func, args):
         if func in exposed_functions:
@@ -94,3 +125,4 @@ if __name__ == "__main__":
 
 
 
+ 
