@@ -13,12 +13,23 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 
 class Window:
-    def __init__(self, title="Paneer", width=800, height=600):
+    def __init__(self,app, title="Paneer", width=800, height=600):
+        self._app = app
         self.title = title
         self.width = width
         self.height = height
         self.resizable = True
     
+    @property
+    def title(self):
+        return self._title
+    
+    @title.setter
+    def title(self, value: str):
+        self._title = value
+        if self._app and self._app.app_window:
+            self._app.app_window.set_title(self._title)
+
     @property
     def height(self):
         return self._height
@@ -28,7 +39,9 @@ class Window:
         if (value <= 0):
             raise ValueError("Height must be a positive integer")
         self._height = value
-    
+        if self._app and self._app.app_window:
+            self._app.app_window.set_default_size(self._width, self._height)
+
     @property
     def width(self):
         return self._width
@@ -38,6 +51,8 @@ class Window:
         if (value <= 0):
             raise ValueError("Width must be a positive integer")
         self._width = value
+        if self._app and self._app.app_window:
+            self._app.app_window.set_default_size(self._width, self._height)
         
 class Paneer:
     def discover_gui(self):
@@ -52,10 +67,11 @@ class Paneer:
 
         return directory_to_serve + "/index.html"
         
-    def __init__(self,window):
+    def __init__(self):
         self.app = Gtk.Application(application_id="com.github.om-thorat.Example", flags=Gio.ApplicationFlags.FLAGS_NONE)
         self.app.connect("activate", self.on_activate)
-        self.window_props = window     
+        self.app_window = None
+        self.window = Window(self)
         self.task_loop = asyncio.new_event_loop()
         self.task_thread = threading.Thread(target=self.task_loop.run_forever, daemon=True)
         self.task_thread.start()
@@ -64,9 +80,9 @@ class Paneer:
 
     def on_activate(self, app):
         self.app_window = Gtk.ApplicationWindow(application=app)
-        self.app_window.set_title(self.window_props.title)
-        self.app_window.set_default_size(self.window_props.width, self.window_props.height)
-        self.app_window.set_resizable(self.window_props.resizable)
+        self.app_window.set_title(self.window.title)
+        self.app_window.set_default_size(self.window.width, self.window.height)
+        self.app_window.set_resizable(self.window.resizable)
 
 
         self.webview = WebKit.WebView()
