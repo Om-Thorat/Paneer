@@ -11,6 +11,9 @@ import json
 import asyncio
 import threading
 from concurrent.futures import ThreadPoolExecutor
+from importlib import resources
+
+paneer_init_js = resources.read_text("paneer", "paneer.js")
 
 class Window:
     def __init__(self,app, title="Paneer", width=800, height=600):
@@ -55,7 +58,7 @@ class Window:
             self._app.app_window.set_default_size(self._width, self._height)
         
 class Paneer:
-    def discover_gui(self):
+    def discover_ui(self):
         if getattr(sys, "frozen", False):
             # Some weird thing when bundled with pyinstaller the bootloader sets path in _MEIPASS
             application_path = sys._MEIPASS
@@ -63,7 +66,7 @@ class Paneer:
             application_path = os.path.dirname(os.path.abspath(__file__))
             application_path = os.path.dirname(application_path)
 
-        directory_to_serve = os.path.join(application_path, "gui")
+        directory_to_serve = os.path.join(application_path, "dist")
 
         return directory_to_serve + "/index.html"
         
@@ -85,12 +88,19 @@ class Paneer:
         self.app_window.set_resizable(self.window.resizable)
 
 
-        self.webview = WebKit.WebView()
+        self.manager = WebKit.UserContentManager()
+        self.manager.add_script(WebKit.UserScript(
+            paneer_init_js,
+            WebKit.UserContentInjectedFrames.ALL_FRAMES,
+            WebKit.UserScriptInjectionTime.END,
+        ))
+
+        self.webview = WebKit.WebView(user_content_manager=self.manager)
         self.webview.get_settings().set_allow_file_access_from_file_urls(True)
         self.webview.get_user_content_manager().register_script_message_handler("paneer")
         self.webview.get_user_content_manager().connect("script-message-received::paneer", self.on_invoke)
-        
-        dir_to_serve = self.discover_gui()
+
+        dir_to_serve = self.discover_ui()
         
         self.webview.get_settings().set_enable_developer_extras(True)
 

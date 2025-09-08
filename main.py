@@ -3,7 +3,7 @@ from paneer.proto import Paneer
 import time
 
 @paneer_command
-async def greet():
+def greet():
     app.window.height = 300
     return "hello from py"
  
