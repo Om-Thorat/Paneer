@@ -4,7 +4,6 @@ import time
 
 @paneer_command
 def greet():
-    app.window.height = 300
     return "hello from py"
  
 @paneer_command_blocking
