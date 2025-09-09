@@ -1,0 +1,2 @@
+include cli/patches/*
+include paneer/paneer.js

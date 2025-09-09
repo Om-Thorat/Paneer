@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "paneer"
+version = "0.1.0"
+description = "Python package for Paneer, a framework to create desktop apps with web technologies and python."
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+authors = [
+  { name = "Om Thorat", email = "thoratom1104@gmail.com" }
+]
+
+dependencies = [
+  "PyGObject", 
+  "inquirer"
+]
+
+[project.scripts]
+paneer = "cli.__main__:main"
+
+[tool.setuptools]
+packages = ["paneer", "cli"]
+include-package-data = true
