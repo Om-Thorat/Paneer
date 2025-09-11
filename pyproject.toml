@@ -15,7 +15,7 @@ authors = [
 
 dependencies = [
   "PyGObject", 
-  "inquirer"
+  "inquirer",
 ]
 
 [project.scripts]
@@ -24,3 +24,6 @@ paneer = "cli.__main__:main"
 [tool.setuptools]
 packages = ["paneer", "cli"]
 include-package-data = true
+
+[tool.setuptools.package-data]
+paneer = ["paneer.js"]

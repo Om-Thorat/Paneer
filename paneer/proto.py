@@ -11,9 +11,11 @@ import json
 import asyncio
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from importlib import resources
+import importlib.resources as resources
 
-paneer_init_js = resources.read_text("paneer", "paneer.js")
+paneer_init_js = ""
+with resources.files("paneer").joinpath("paneer.js").open("r", encoding="utf-8") as f:
+    paneer_init_js = f.read()
 
 class Window:
     def __init__(self,app, title="Paneer", width=800, height=600):
@@ -65,8 +67,10 @@ class Paneer:
             directory_to_serve = cwd_dist
         
         if getattr(sys, "frozen", False):
-            # Some weird thing when bundled with pyinstaller the bootloader sets path in _MEIPASS
             application_path = getattr(sys, "_MEIPASS", None) or os.path.dirname(os.path.abspath(__file__))
+            dist_path = os.path.join(application_path, "dist")
+            if os.path.isdir(dist_path):
+                directory_to_serve = dist_path
 
         return directory_to_serve + "/index.html"
         

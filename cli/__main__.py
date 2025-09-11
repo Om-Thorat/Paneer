@@ -3,6 +3,8 @@ import subprocess
 import os
 import pathlib
 import sys
+import argparse
+import PyInstaller.__main__
 
 def run_scaffolder(framework, project_name):
 
@@ -31,19 +33,55 @@ def run_scaffolder(framework, project_name):
 
 
 def main():
-    cmd = sys.argv[1] if len(sys.argv) > 1 else None
-    if cmd == "create":
-        questions = [
-            inquirer.List(
-                "framework",
-                message="Which frontend?",
-                choices=["React", "Vue", "Svelte", "Other"],
-            ),
-            inquirer.Text("project_name", message="Enter project name", default="my-app"),
-        ]
-        answers = inquirer.prompt(questions)
-        framework = answers["framework"]
-        project_name = answers["project_name"]
+    parser = argparse.ArgumentParser(
+        description="Paneer CLI: Build and scaffold projects easily."
+    )
+    subparsers = parser.add_subparsers(dest="command", required=True, help="Subcommands")
+
+    build_parser = subparsers.add_parser("build", help="Build the application with PyInstaller")
+
+    create_parser = subparsers.add_parser("create", help="Create a new frontend project")
+    create_parser.add_argument("--framework", choices=["React", "Vue", "Svelte", "Other"], help="Framework to use")
+    create_parser.add_argument("--project-name", help="Project name", default="my-app")
+
+    args = parser.parse_args()
+
+    if args.command == "build":
+        try:
+            subprocess.run(["npm", "run", "build"], check=True)
+        except subprocess.CalledProcessError:
+            print("npm run build failed.")
+            return
+
+        os.makedirs("release", exist_ok=True)
+        PyInstaller.__main__.run([
+            "--collect-all", "paneer",
+            "main.py",
+            "--add-data", "dist/:dist,",
+            "--distpath", "release",
+        ])
+        print("Build complete.")
+        return
+
+    if args.command == "create":
+        framework = args.framework
+        project_name = args.project_name
+        if framework is None:
+            questions = [
+                inquirer.List(
+                    "framework",
+                    message="Which frontend?",
+                    choices=["React", "Vue", "Svelte", "Other"],
+                ),
+                inquirer.Text("project_name", message="Enter project name", default=project_name),
+            ]
+            answers = inquirer.prompt(questions) or {}
+            framework = answers.get("framework")
+            project_name = answers.get("project_name", project_name)
+
+        if not framework:
+            print("No framework selected.")
+            return
 
         if framework != "Other":
             print(f"Using official {framework} scaffolder...")
@@ -58,6 +96,9 @@ def main():
                 print("Failed to connect to Github")
         else:
             print("Please initialize your project manually.")
+
+if __name__ == "__main__":
+    main()
 
 if __name__ == "__main__":
     main()
