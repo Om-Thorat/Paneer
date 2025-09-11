@@ -59,14 +59,14 @@ class Window:
         
 class Paneer:
     def discover_ui(self):
+        cwd = os.getcwd()
+        cwd_dist = os.path.join(cwd, "dist")
+        if os.path.isdir(cwd_dist):
+            directory_to_serve = cwd_dist
+        
         if getattr(sys, "frozen", False):
             # Some weird thing when bundled with pyinstaller the bootloader sets path in _MEIPASS
-            application_path = sys._MEIPASS
-        else:
-            application_path = os.path.dirname(os.path.abspath(__file__))
-            application_path = os.path.dirname(application_path)
-
-        directory_to_serve = os.path.join(application_path, "dist")
+            application_path = getattr(sys, "_MEIPASS", None) or os.path.dirname(os.path.abspath(__file__))
 
         return directory_to_serve + "/index.html"
         
