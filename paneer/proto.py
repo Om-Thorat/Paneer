@@ -13,6 +13,8 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 import importlib.resources as resources
 
+currEnv = os.getenv("paneer_env")
+
 paneer_init_js = ""
 with resources.files("paneer").joinpath("paneer.js").open("r", encoding="utf-8") as f:
     paneer_init_js = f.read()
@@ -67,6 +69,7 @@ class Paneer:
             directory_to_serve = cwd_dist
         
         if getattr(sys, "frozen", False):
+            # Some weird thing when bundled with pyinstaller the bootloader sets path in _MEIPASS
             application_path = getattr(sys, "_MEIPASS", None) or os.path.dirname(os.path.abspath(__file__))
             dist_path = os.path.join(application_path, "dist")
             if os.path.isdir(dist_path):
@@ -104,11 +107,13 @@ class Paneer:
         self.webview.get_user_content_manager().register_script_message_handler("paneer")
         self.webview.get_user_content_manager().connect("script-message-received::paneer", self.on_invoke)
 
-        dir_to_serve = self.discover_ui()
         
         self.webview.get_settings().set_enable_developer_extras(True)
-
-        self.webview.load_uri("file://" + dir_to_serve)
+        if(currEnv == "dev"):
+            self.webview.load_uri("http://localhost:5173")
+        else:
+            dir_to_serve = self.discover_ui()
+            self.webview.load_uri("file://" + dir_to_serve)
         self.app_window.set_child(self.webview)
         self.app_window.present()
 

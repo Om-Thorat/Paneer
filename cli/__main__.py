@@ -1,5 +1,6 @@
 import inquirer
 import subprocess
+from subprocess import Popen
 import os
 import pathlib
 import sys
@@ -44,6 +45,8 @@ def main():
     create_parser.add_argument("--framework", choices=["React", "Vue", "Svelte", "Other"], help="Framework to use")
     create_parser.add_argument("--project-name", help="Project name", default="my-app")
 
+    run_parser = subparsers.add_parser("run", help="Run the application in development mode")
+
     args = parser.parse_args()
 
     if args.command == "build":
@@ -62,6 +65,19 @@ def main():
         ])
         print("Build complete.")
         return
+
+    if args.command == "run":
+        env = os.environ.copy()
+        env['paneer_env'] = 'dev'
+        
+        procs = [
+            subprocess.Popen(["npm", "run", "dev"], env=env),
+            subprocess.Popen(["python3", "main.py"], env=env)
+        ]
+        for i in procs:
+            i.wait()
+
+        env['paneer_env'] = ''
 
     if args.command == "create":
         framework = args.framework
