@@ -6,7 +6,14 @@ window.paneer = {
         console.log(id.length,id);
         return new Promise((resolve, reject) => {
             try {
-                window.webkit.messageHandlers.paneer.postMessage({ id, func, args });
+                const payload = { id, func, args };
+                if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.paneer) {
+                    window.webkit.messageHandlers.paneer.postMessage(payload);
+                } else if (window.chrome && window.chrome.webview) {
+                    window.chrome.webview.postMessage(JSON.stringify(payload));
+                } else {
+                    console.warn("Paneer backend not detected.");
+                }
                 window.paneer._promises.set(id, resolve);
             } catch (error) {
                 reject(error);
