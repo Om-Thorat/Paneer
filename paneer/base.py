@@ -88,6 +88,15 @@ class PaneerBase(ABC):
     def _execute_js(self, script):
         pass
 
+    def emit(self, event, data=None):
+        try:
+            json_data = json.dumps(data)
+            safe_event = event.replace("'", "\\'")
+            script = f"window.paneer._emit('{safe_event}', {json_data});"
+            self._execute_js(script)
+        except Exception as e:
+            print(f"Failed to emit event {event}: {e}")
+
     def _return_result(self, result, msg_id):
         try:
             json_result = json.dumps({"result": result, "id": msg_id})

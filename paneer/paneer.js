@@ -27,6 +27,22 @@ window.paneer = {
             resolve(result);
             window.paneer._promises.delete(id);
         }
+    },
+
+    _listeners: new Map(),
+
+    on: (event, callback) => {
+        if (!window.paneer._listeners.has(event)) {
+            window.paneer._listeners.set(event, []);
+        }
+        window.paneer._listeners.get(event).push(callback);
+    },
+
+    _emit: (event, data) => {
+        const callbacks = window.paneer._listeners.get(event);
+        if (callbacks) {
+            callbacks.forEach(cb => cb(data));
+        }
     }
     
 };
