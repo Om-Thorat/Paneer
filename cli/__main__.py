@@ -1,6 +1,7 @@
 import inquirer
 import subprocess
 from subprocess import Popen
+import shutil
 import os
 import pathlib
 import sys
@@ -12,19 +13,24 @@ def run_scaffolder(framework, project_name):
     script_dir = pathlib.Path(__file__).parent.absolute()
     patches_dir = os.path.join(script_dir, "patches")
 
+    npm_path = shutil.which("npm")
+    if not npm_path:
+        print("Error: 'npm' not found on PATH. Install Node.js and ensure 'npm' is on your PATH.")
+        return None
+
     if framework == "React":
-        subprocess.run(["npm", "create", "vite@latest", project_name, "--", "--template", "react"], check=True)
+        subprocess.run([npm_path, "create", "vite@latest", project_name, "--", "--template", "react"], check=True)
         os.chdir(project_name)
     elif framework == "Vue":
-        subprocess.run(["npm", "create", "vite@latest", project_name, "--", "--template", "vue"], check=True)
+        subprocess.run([npm_path, "create", "vite@latest", project_name, "--", "--template", "vue"], check=True)
         os.chdir(project_name)
     elif framework == "Svelte":
-        subprocess.run(["npm", "create", "vite@latest", project_name, "--", "--template", "svelte"], check=True)
+        subprocess.run([npm_path, "create", "vite@latest", project_name, "--", "--template", "svelte"], check=True)
         os.chdir(project_name)
     else:
         print("Please initialize your project manually.")
         return None
-    subprocess.run(["npm", "install"], check=True)
+    subprocess.run([npm_path, "install"], check=True)
     subprocess.run(["git", "init"], check=True)
 
     patch_path = os.path.join(patches_dir, framework.lower() + ".patch")
@@ -35,6 +41,7 @@ def run_scaffolder(framework, project_name):
 
 def main():
     parser = argparse.ArgumentParser(
+
         description="Paneer CLI: Build and scaffold projects easily."
     )
     subparsers = parser.add_subparsers(dest="command", required=True, help="Subcommands")
@@ -51,7 +58,11 @@ def main():
 
     if args.command == "build":
         try:
-            subprocess.run(["npm", "run", "build"], check=True)
+            npm_path = shutil.which("npm")
+            if not npm_path:
+                print("Error: 'npm' not found on PATH. Install Node.js and ensure 'npm' is on your PATH.")
+                return
+            subprocess.run([npm_path, "run", "build"], check=True)
         except subprocess.CalledProcessError:
             print("npm run build failed.")
             return
@@ -69,10 +80,9 @@ def main():
     if args.command == "run":
         env = os.environ.copy()
         env['paneer_env'] = 'dev'
-        
         procs = [
-            subprocess.Popen(["npm", "run", "dev"], env=env),
-            subprocess.Popen(["python3", "main.py"], env=env)
+            subprocess.Popen([shutil.which("npm") or "npm", "run", "dev"], env=env),
+            subprocess.Popen([sys.executable, "main.py"], env=env)
         ]
         for i in procs:
             i.wait()
@@ -106,7 +116,7 @@ def main():
                 script_dir = pathlib.Path(__file__).parent.absolute()
                 patches_dir = os.path.join(script_dir, "patches")
                 os.chdir(project_name)
-                subprocess.run(["cp", os.path.join(patches_dir, "example.py"), "main.py"], check=True)
+                shutil.copy(os.path.join(patches_dir, "example.py"), "main.py")
                 os.chdir("..")
             except subprocess.CalledProcessError:
                 print("Failed to connect to Github")

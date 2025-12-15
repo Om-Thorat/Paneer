@@ -14,8 +14,9 @@ authors = [
 ]
 
 dependencies = [
-  "PyGObject", 
+  "PyGObject; sys_platform != 'win32'",
   "inquirer",
+  "PyInstaller"
 ]
 
 [project.scripts]
