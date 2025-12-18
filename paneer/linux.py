@@ -5,6 +5,9 @@ from gi.repository import Gtk, Gio, GLib, WebKit
 import sys
 import os
 import json
+import time
+import urllib.request
+import threading
 import importlib.resources as resources
 from paneer.base import PaneerBase, WindowBase
 
@@ -55,7 +58,27 @@ class Paneer(PaneerBase):
         self.webview.get_settings().set_enable_developer_extras(True)
         
         if currEnv == "dev":
-            self.webview.load_uri("http://localhost:5173")
+            def wait_and_nav():
+                url = "http://127.0.0.1:5173"
+                print(f"Waiting for {url}...")
+                for i in range(60):
+                    try:
+                        with urllib.request.urlopen(url) as response:
+                            if response.status == 200:
+                                print(f"Server ready at {url}")
+                                break
+                    except Exception:
+                        if i % 10 == 0:
+                            print(f"Waiting for frontend... ({i})")
+                        time.sleep(0.5)
+                
+                def nav():
+                    print(f"Navigating to {url}")
+                    self.webview.load_uri(url)
+                
+                GLib.idle_add(nav)
+
+            threading.Thread(target=wait_and_nav, daemon=True).start()
         else:
             dir_to_serve = self.discover_ui()
             self.webview.load_uri("file://" + dir_to_serve + "/index.html")

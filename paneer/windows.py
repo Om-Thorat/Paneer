@@ -1,10 +1,18 @@
 import json
 import os
 import sys
+import time
+import urllib.request
+import threading
 import importlib.resources as resources
 from paneer.base import PaneerBase, WindowBase
 
 # needs pythonnet, Microsoft.Web.WebView2.WinForms.dll, Microsoft.Web.WebView2.Core.dll
+
+# Add libs to PATH for WebView2Loader.dll
+libs_dir = os.path.join(os.path.dirname(__file__), "libs")
+if os.path.exists(libs_dir):
+    os.environ["Path"] += ";" + libs_dir
 
 try:
     import clr
@@ -13,13 +21,19 @@ try:
     clr.AddReference("System.Drawing")
     
     try:
-        clr.AddReference("Microsoft.Web.WebView2.WinForms")
-        clr.AddReference("Microsoft.Web.WebView2.Core")
+        clr.AddReference(os.path.join(libs_dir, "Microsoft.Web.WebView2.WinForms.dll"))
+        clr.AddReference(os.path.join(libs_dir, "Microsoft.Web.WebView2.Core.dll"))
     except Exception:
-        print("Warning: Microsoft.Web.WebView2 DLLs not found.")
+        try:
+            clr.AddReference("Microsoft.Web.WebView2.WinForms")
+            clr.AddReference("Microsoft.Web.WebView2.Core")
+        except Exception:
+            print("Warning: Microsoft.Web.WebView2 DLLs not found.")
 
     from System.Windows.Forms import Application, Form, DockStyle, Control
     from System.Drawing import Size
+    from System import Action
+    from System.Threading import Thread, ApartmentState, ThreadStart
     from Microsoft.Web.WebView2.WinForms import WebView2
     from Microsoft.Web.WebView2.Core import CoreWebView2HostResourceAccessKind
 except ImportError:
@@ -28,6 +42,7 @@ except ImportError:
     pass
 
 currEnv = os.getenv("paneer_env")
+print(f"Paneer Environment: {currEnv}")
 
 paneer_init_js = ""
 try:
@@ -61,7 +76,10 @@ class Paneer(PaneerBase):
 
     def __init__(self):
         super().__init__()
-        
+        self.form = None
+        self.webview = None
+
+    def _init_ui(self):
         self.form = Form()
         self.form.Text = self.window.title
         self.form.Size = Size(self.window.width, self.window.height)
@@ -71,6 +89,13 @@ class Paneer(PaneerBase):
         self.form.Controls.Add(self.webview)
         
         self.form.Load += self.on_form_load
+        Application.Run(self.form)
+
+    def run(self):
+        t = Thread(ThreadStart(self._init_ui))
+        t.SetApartmentState(ApartmentState.STA)
+        t.Start()
+        t.Join()
 
     def on_form_load(self, sender, e):
         try:
@@ -90,18 +115,47 @@ class Paneer(PaneerBase):
         core_webview.Settings.AreDevToolsEnabled = True
         
         if currEnv == "dev":
-            core_webview.Navigate("http://localhost:5173")
+            def wait_and_nav():
+                try:
+                    url = "http://127.0.0.1:5173"
+                    print(f"Waiting for {url}...")
+                    
+                    # Disable proxies for localhost check
+                    proxy_handler = urllib.request.ProxyHandler({})
+                    opener = urllib.request.build_opener(proxy_handler)
+                    
+                    for i in range(60):
+                        try:
+                            with opener.open(url) as response:
+                                if response.status == 200:
+                                    print(f"Server ready at {url}")
+                                    break
+                        except Exception:
+                            if i % 10 == 0:
+                                print(f"Waiting for frontend... ({i})")
+                            time.sleep(0.5)
+                    else:
+                        print("Timeout waiting for frontend server.")
+                        return
+                    
+                    def nav():
+                        print(f"Navigating to {url}")
+                        core_webview.Navigate(url)
+                    
+                    if self.form.InvokeRequired:
+                        self.form.Invoke(Action(nav))
+                    else:
+                        nav()
+                except Exception as e:
+                    print(f"Error in navigation thread: {e}")
+
+            threading.Thread(target=wait_and_nav, daemon=True).start()
         else:
             folder_path = self.discover_ui()
-            core_webview.SetVirtualHostNameToFolderMapping(
-                "paneer.local", 
-                folder_path, 
-                CoreWebView2HostResourceAccessKind.Allow
-            )
-            core_webview.Navigate("https://paneer.local/index.html")
-
-    def run(self):
-        Application.Run(self.form)
+            file_path = os.path.join(folder_path, "index.html")
+            file_url = f"file:///{file_path.replace(os.sep, '/')}"
+            print(f"Navigating to {file_url}")
+            core_webview.Navigate(file_url)
 
     def _execute_js(self, script):
         def run_on_main():

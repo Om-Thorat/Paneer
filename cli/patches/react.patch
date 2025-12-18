@@ -54,9 +54,14 @@ diff --git a/vite.config.js b/vite.config.js
 index 8b0f57b..0a5127e 100644
 --- a/vite.config.js
 +++ b/vite.config.js
-@@ -4,4 +4,5 @@ import react from '@vitejs/plugin-react'
+@@ -4,4 +4,8 @@ import react from '@vitejs/plugin-react'
  // https://vite.dev/config/
  export default defineConfig({
    plugins: [react()],
-+  base: './'
+-  base: './'
++  base: './',
++  server: {
++    host: '127.0.0.1',
++    port: 5173,
++  }
  })
