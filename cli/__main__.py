@@ -6,6 +6,7 @@ import os
 import pathlib
 import sys
 import argparse
+import importlib.resources as resources
 import PyInstaller.__main__
 
 def run_scaffolder(framework, project_name):
@@ -68,10 +69,31 @@ def main():
             return
 
         os.makedirs("release", exist_ok=True)
+
+        sep = ";" if os.name == "nt" else ":"
+
+        # Include built frontend and paneer/libs DLLs
+        add_data_args = [
+            "--add-data", f"dist{sep}dist",
+        ]
+        try:
+            paneer_root = resources.files("paneer")
+            libs_path = paneer_root.joinpath("libs")
+
+            libs_fs_path = str(libs_path)
+            if os.path.isdir(libs_fs_path):
+                add_data_args += ["--add-data", f"{libs_fs_path}{sep}paneer/libs"]
+        except Exception:
+            pass
+
         PyInstaller.__main__.run([
             "--collect-all", "paneer",
+            "--collect-submodules", "paneer",
+            "--hidden-import", "paneer.windows",
+            "--hidden-import", "paneer.linux",
+            "--hidden-import", "clr",
             "main.py",
-            "--add-data", "dist/:dist,",
+            *add_data_args,
             "--distpath", "release",
         ])
         print("Build complete.")

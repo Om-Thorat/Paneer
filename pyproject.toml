@@ -16,7 +16,8 @@ authors = [
 dependencies = [
   "PyGObject; sys_platform != 'win32'",
   "inquirer",
-  "PyInstaller"
+  "PyInstaller",
+  "pythonnet; sys_platform == 'win32'"
 ]
 
 [project.scripts]
@@ -27,4 +28,4 @@ packages = ["paneer", "cli"]
 include-package-data = true
 
 [tool.setuptools.package-data]
-paneer = ["paneer.js"]
+paneer = ["paneer.js", "libs/*"]

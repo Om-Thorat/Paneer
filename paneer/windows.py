@@ -152,10 +152,17 @@ class Paneer(PaneerBase):
             threading.Thread(target=wait_and_nav, daemon=True).start()
         else:
             folder_path = self.discover_ui()
-            file_path = os.path.join(folder_path, "index.html")
-            file_url = f"file:///{file_path.replace(os.sep, '/')}"
-            print(f"Navigating to {file_url}")
-            core_webview.Navigate(file_url)
+            
+            host_name = "paneer.app"
+            core_webview.SetVirtualHostNameToFolderMapping(
+                host_name, 
+                folder_path, 
+                CoreWebView2HostResourceAccessKind.Allow
+            )
+            
+            url = f"https://{host_name}/index.html"
+            print(f"Navigating to {url}")
+            core_webview.Navigate(url)
 
     def _execute_js(self, script):
         def run_on_main():
