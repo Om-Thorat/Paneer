@@ -1,2 +1,3 @@
 include cli/patches/*
+recursive-include cli/templates *
 include paneer/paneer.js

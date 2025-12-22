@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "paneer"
-version = "0.1.0"
+version = "0.1.2"
 description = "Python package for Paneer, a framework to create desktop apps with web technologies and python."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -24,8 +24,12 @@ dependencies = [
 paneer = "cli.__main__:main"
 
 [tool.setuptools]
-packages = ["paneer", "cli"]
 include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["paneer*", "cli*"]
+exclude = ["cli.templates*"]
 
 [tool.setuptools.package-data]
 paneer = ["paneer.js", "libs/*"]
+cli = ["patches/*", "templates/**/*"]
